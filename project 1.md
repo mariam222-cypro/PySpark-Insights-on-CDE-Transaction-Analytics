@@ -1,4 +1,3 @@
-# Sessions & Apache Iceberg
 
 ---
 
