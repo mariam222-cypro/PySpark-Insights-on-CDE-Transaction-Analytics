@@ -16,6 +16,9 @@ This project demonstrates the use of **Apache Spark** within the **Cloudera Data
   - Calculating transaction amounts by date and location
   - Finding frequent credit card users and high-transaction customers
   - Calculating transaction distances to identify anomalies in customer spending patterns.
+  - Calculating transaction metrics and aggregating data by time periods.
+  - Identifying unusual spending patterns based on transaction locations.
+  - Integrating customer and transaction data for comprehensive analytics.
 
 ## Setup & Requirements
 
@@ -83,7 +86,31 @@ Join the transactions and customer data on credit card numbers to explore spendi
    ```
 
 ## Results and Insights
-After running the analysis, you will be able to:
-- View summary statistics and patterns in transaction data.
-- Detect high-value customers and frequent credit card users.
-- Identify potentially suspicious transactions based on geographic location data.
+**Insights from Transaction Data**
+1. Average Transaction Amounts: We calculate both the mean and median transaction amounts to understand typical spending behaviors. The mean reveals overall trends, while the median provides resilience against the influence of high-value outliers (thanks, VIP customers).
+
+2. Monthly Transaction Patterns: By grouping transactions by month, we uncover spending trends. Does summer drive higher spending? Are there winter savings? This monthly breakdown paints a picture of our customers’ seasonally driven wallet-opening habits.
+
+3. Weekly Spending Habits: Aggregating transactions by day of the week, we identify which days spark the most financial activity. Will we find more transactions on Fridays as people let loose or on Sundays when they stock up for the week ahead?
+
+4. Top Customers by Transaction Volume: We identify our high rollers—the most active customers in terms of transaction counts, possibly setting off our “loyalty program alert.”
+
+5. High-Frequency Credit Card Holders: The data reveal the top 100 customers with multiple credit cards. In some cases, this indicates financial savviness; in others, it might imply caution—or perhaps an affinity for shiny, plastic card collections.
+
+6. Credit Cards Linked to Multiple Names: Discovering credit cards associated with several names can indicate shared cards within families or, let’s be honest, the occasional suspicious activity.
+
+**Insights from Customer PII Data**
+Customers with Multiple Addresses: Analyzing address counts shows the top 25 customers who apparently move around—a lot. While some might call them adventurers, you could say they’re just indecisive.
+
+**Insights from Joined Datasets**
+- Transaction Location vs. Home Location: By joining transaction data with customer address data, we compare the coordinates of each transaction to the customer’s home address. This tells us if a customer’s transaction occurred within their usual stomping grounds or if they’re spending further afield.
+
+- Transactions Beyond 100 Miles from Home: Using a distance function to measure how far a customer’s transaction is from home reveals cases where the purchase might be worth a second look. Spending over 100 miles away could mean they’re on vacation, but repeated occurrences might suggest a data anomaly (or a seriously long commute).
+
+## Potential Uses
+This project’s insights can be useful in multiple scenarios:
+
+1. Anomaly Detection: Identifying out-of-character transactions can aid in fraud detection.
+2. Customer Segmentation: Categorizing high-frequency spenders vs. occasional buyers, loyal cardholders, and geographic preferences.
+3. Marketing Strategy: Insights into spending habits by day, month, and season offer invaluable clues for tailored marketing campaigns.
+4. Each of these insights, crafted by the Spark-PySpark alliance, allows us to take vast amounts of data and distill it into knowledge—like creating a fine reduction sauce from a massive cauldron of data stew.
