@@ -33,57 +33,92 @@ This project demonstrates the use of **Apache Spark** within the **Cloudera Data
 - **Customer PII Data**: CSV files containing personally identifiable information.
 
 ### Environment Configuration
-Navigate to the **Cloudera Data Engineering Home Page**:
-1. Launch a PySpark Session (keep default settings).
+1. Launch a **CDE PySpark Session**.
 2. Open the "Interact" tab for code input.
-3. Retrieve your assigned storage location and username from the **Trial Manager** homepage.
-4. Copy and paste the following variables into the notebook, replacing placeholders with your details:
+3. Retrieve your assigned `storageLocation` and `username` from the **Trial Manager**.
+4. Paste the values into the notebook:
    ```python
-   storageLocation = "<paste-the-trialmanager-configuration-value here>"
-   username = "<paste-the-trialmanager-configuration-value here>"
+   storageLocation = "<your-storage-location>"
+   username = "<your-username>"
    ```
 
-## Lab Instructions
+## Project Instructions
 
 ### Step 1: Load and Explore Transaction Data
-Load and print the schema for the transactions dataset:
+Load the transactions data, displaying the schema to understand the dataset's structure.
 ```python
 transactionsDf = spark.read.json("{0}/transactions/{1}/rawtransactions".format(storageLocation, username))
 transactionsDf.printSchema()
 ```
 
-### Step 2: Flatten Nested Structures and Transform Data
-Flatten nested structures in the JSON data and rename columns for ease of use.
+### Step 2: Flatten and Transform Data
+Flatten nested JSON structures for better accessibility and rename columns to enhance readability.
 
-### Step 3: Perform Data Analysis
-Calculate basic statistics like **Mean** and **Median** transaction amounts:
-```python
-transactionsAmountMean = round(transactionsDf.select(F.mean("transaction_amount")).collect()[0][0], 2)
-transactionsAmountMedian = round(transactionsDf.stat.approxQuantile("transaction_amount", [0.5], 0.001)[0], 2)
-print("Transaction Amount Mean: ", transactionsAmountMean)
-print("Transaction Amount Median: ", transactionsAmountMedian)
-```
+### Step 3: Key Insights from Transaction Data
 
-### Step 4: Aggregate Data by Time Period
-- Group transactions by month and day of the week to analyze spending patterns.
+- **Transaction Amount Statistics**: Calculated **mean** and **median** transaction amounts to understand the typical spending behavior:
+  ```python
+  transactionsAmountMean = round(transactionsDf.select(F.mean("transaction_amount")).collect()[0][0], 2)
+  transactionsAmountMedian = round(transactionsDf.stat.approxQuantile("transaction_amount", [0.5], 0.001)[0], 2)
+  ```
+  - **Insight**: Identifying a high average transaction amount suggests potentially high-value customer segments, while the median highlights typical spending patterns.
 
-### Step 5: Load and Analyze Customer PII Data
-1. Load customer data, cast coordinates to `float`, and create a temporary Spark view.
-2. Identify customers with multiple credit cards or addresses.
+- **Monthly and Weekly Patterns**: Aggregated transaction amounts by month and day of the week.
+  ```python
+  spark.sql("SELECT MONTH(event_ts) AS month, avg(transaction_amount) FROM trx GROUP BY month ORDER BY month").show()
+  spark.sql("SELECT DAYOFWEEK(event_ts) AS DAYOFWEEK, avg(transaction_amount) FROM trx GROUP BY DAYOFWEEK ORDER BY DAYOFWEEK").show()
+  ```
+  - **Insight**: Recognizing peak transaction days or months can help tailor marketing or resource allocation strategies.
 
-### Step 6: Join and Compare Datasets
-Join the transactions and customer data on credit card numbers to explore spending patterns by location.
+- **Top Credit Card Users**: Listed the most frequently used credit cards to track high-activity customers.
+  ```python
+  spark.sql("SELECT CREDIT_CARD_NUMBER, COUNT(*) AS COUNT FROM trx GROUP BY CREDIT_CARD_NUMBER ORDER BY COUNT DESC LIMIT 10").show()
+  ```
+  - **Insight**: Frequent card usage may indicate valuable or high-risk customers, essential for personalized services or fraud detection.
 
-### Step 7: Calculate Distance and Identify Anomalous Transactions
-1. Implement a PySpark UDF to calculate the distance between the customer’s home and transaction location.
-2. Identify customers with transactions occurring more than 100 miles from home.
+### Step 4: Load and Explore Customer PII Data
 
-### Example Code Snippets
-- **UDF for Distance Calculation**:
-   ```python
-   from pyspark.sql.types import FloatType
-   distanceFunc = F.udf(lambda arr: (((arr[2]-arr[0])**2) + ((arr[3]-arr[1])**2)**(1/2)), FloatType())
-   ```
+Load and prepare customer data by casting latitude and longitude values to floats for location-based analysis.
+
+### Step 5: Customer Data Insights
+
+- **High Credit Card Ownership**: Found customers with multiple credit cards, highlighting those with high card counts.
+  ```python
+  spark.sql("SELECT name AS name, COUNT(credit_card_number) AS CC_COUNT FROM cust_info GROUP BY name ORDER BY CC_COUNT DESC LIMIT 100").show()
+  ```
+  - **Insight**: Customers with multiple cards are ideal candidates for premium or loyalty programs but may also pose a higher fraud risk.
+
+- **Shared Credit Cards**: Identified credit cards used by multiple customers.
+  ```python
+  spark.sql("SELECT COUNT(name) AS NM_COUNT, credit_card_number AS CC_NUM FROM cust_info GROUP BY CC_NUM ORDER BY NM_COUNT DESC LIMIT 100").show()
+  ```
+  - **Insight**: Shared credit cards can indicate potential fraud or household usage, requiring further investigation.
+
+- **Multiple Addresses**: Listed customers with multiple addresses.
+  ```python
+  spark.sql("SELECT name AS name, COUNT(address) AS ADD_COUNT FROM cust_info GROUP BY name ORDER BY ADD_COUNT DESC LIMIT 25").show()
+  ```
+  - **Insight**: Customers with multiple addresses may indicate frequent movers or, in some cases, potential address mismatches.
+
+### Step 6: Join Datasets for Location-Based Analysis
+
+Joined transaction and customer datasets by credit card numbers, enabling a comparison of transaction locations with customer home coordinates.
+
+### Step 7: Calculate and Analyze Transaction Distances
+
+- **Distance Calculation**: Created a PySpark UDF to calculate the distance between a customer’s registered address and the transaction location.
+  ```python
+  from pyspark.sql.types import FloatType
+  distanceFunc = F.udf(lambda arr: (((arr[2]-arr[0])**2) + ((arr[3]-arr[1])**2)**(1/2)), FloatType())
+  distanceDf = joinDf.withColumn("trx_dist_from_home", distanceFunc(F.array("latitude", "longitude", "address_latitude", "address_longitude")))
+  ```
+
+- **Anomalous Transactions**: Filtered transactions occurring more than 100 miles from the registered address.
+  ```python
+  distanceDf.filter(distanceDf.trx_dist_from_home > 100).show()
+  ```
+  - **Insight**: Identifying customers with significant distances between their transaction and home locations may highlight potential fraudulent activities or unusual behavior.
+
 
 ## Results and Insights
 **Insights from Transaction Data**
